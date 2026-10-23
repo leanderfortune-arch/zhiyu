@@ -23,12 +23,16 @@ export async function createAuth(directory, { secure = true, now = Date.now } = 
   }
   const sessions = new Map();
   const failures = new Map();
+  // A Secure cookie cannot be overwritten from HTTP, even on another port.
+  // Keep protocol-specific names so switching from HTTPS does not cause a loop.
+  const cookieName = secure ? "zhiyu_session_https" : "zhiyu_session_http";
+  const cookiePattern = new RegExp(`(?:^|;\\s*)${cookieName}=([A-Za-z0-9_-]+)`);
   const cookie = (value, maxAge) =>
-    `zhiyu_session=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secure ? "; Secure" : ""}`;
+    `${cookieName}=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secure ? "; Secure" : ""}`;
   return {
     sessions,
     authenticate(req) {
-      const token = /(?:^|;\s*)zhiyu_session=([A-Za-z0-9_-]+)/.exec(req.headers.cookie || "")?.[1];
+      const token = cookiePattern.exec(req.headers.cookie || "")?.[1];
       const session = sessions.get(token);
       if (!session || session.expires < now()) {
         sessions.delete(token);

@@ -4,7 +4,7 @@
 
 ## 使用
 
-部署地址：<http://100.78.177.33:8091>，仅绑定服务器的内网地址，使用 HTTP。网页登录 Cookie 随访问源自动使用 HTTP 配置；来源校验、CSRF 校验和登录保护继续保留。
+部署地址：<http://100.78.177.33:8091>，仅绑定服务器的内网地址，使用 HTTP。网页登录 Cookie 按协议分为 `zhiyu_session_http` 与 `zhiyu_session_https`，防止历史 Secure Cookie 阻止 HTTP 登录；来源校验、CSRF 校验和登录保护继续保留。
 
 Web 访问密码在服务器首次启动时随机生成，保存于 `/opt/zhiyu/data/initial-password.txt`，仅文件所有者可读。Web 登录和密钥库主密码相互独立。首次进入后由使用者创建工作区和密钥库主密码，部署过程不会预设生产密钥库密码。
 
@@ -76,3 +76,11 @@ node scripts/import-web-inventory.mjs ORIGIN INVENTORY_JSON PASSWORD_FILE BEFORE
 ```
 
 Web 测试还覆盖代理转发及流式响应、回环地址绕过、HTTP Cookie，以及资产合并幂等性。上文在 macOS 上失败的 43 项本机日志采集测试已在实际 Linux 运行镜像中重新验证，44 项全部通过。
+
+登录回归可从真实浏览器表单开始，预置旧 HTTPS Secure Cookie 后验证 HTTP 登录与会话写入：
+
+```sh
+node scripts/web-login-smoke.mjs HTTP_ORIGIN PASSWORD_FILE SCREENSHOT_PATH
+```
+
+登录页在跳转前还会检查浏览器是否保存了会话；Cookie 被阻止时保留表单并显示明确原因，不再无提示地返回登录页。密码文件及会话令牌不进入日志或 Git。

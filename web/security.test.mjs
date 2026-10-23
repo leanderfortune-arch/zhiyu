@@ -7,6 +7,34 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createAuth } from "./auth.mjs";
 
+test("HTTP login is isolated from old HTTPS Secure cookies on the same host", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "zhiyu-protocol-auth-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const httpsAuth = await createAuth(directory, { secure: true });
+  const password = (await readFile(join(directory, "initial-password.txt"), "utf8")).trim();
+  const httpAuth = await createAuth(directory, { secure: false });
+  const secureLogin = httpsAuth.login(password, "https-client");
+  const plainLogin = httpAuth.login(password, "http-client");
+  const secureCookie = secureLogin.cookie.split(";")[0];
+  const plainCookie = plainLogin.cookie.split(";")[0];
+  assert.notEqual(secureCookie.split("=")[0], plainCookie.split("=")[0]);
+  assert.match(secureLogin.cookie, /; Secure$/);
+  assert.doesNotMatch(plainLogin.cookie, /; Secure/);
+  const request = {
+    headers: { cookie: `zhiyu_session=old-legacy-cookie; ${secureCookie}; ${plainCookie}` },
+  };
+  assert.ok(httpAuth.authenticate(request));
+  assert.equal(
+    httpAuth.authenticate({
+      headers: { cookie: `zhiyu_session=old-legacy-cookie; ${secureCookie}` },
+    }),
+    null,
+  );
+  const token = httpAuth.authenticate(request).token;
+  assert.match(httpAuth.logout(token), /^zhiyu_session_http=;.*Max-Age=0/);
+  assert.equal(httpAuth.authenticate(request), null);
+});
+
 test("owner authentication limits guessing and expires/revokes sessions", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "zhiyu-auth-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
