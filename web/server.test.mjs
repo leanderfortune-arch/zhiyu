@@ -83,6 +83,7 @@ test(
     async function login() {
       const response = await request("/api/login", { password });
       assert.equal(response.status, 200);
+      assert.doesNotMatch(response.headers.get("set-cookie"), /; Secure(?:;|$)/);
       cookie = response.headers.get("set-cookie").split(";")[0];
       const session = await (await request("/api/session")).json();
       csrf = session.csrf;

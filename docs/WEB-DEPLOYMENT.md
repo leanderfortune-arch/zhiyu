@@ -4,7 +4,7 @@
 
 ## 使用
 
-部署地址：<https://100.78.177.33:8443>，仅绑定服务器的内网地址。当前证书为自签名证书；如需浏览器默认信任，应配置自己的域名及有效证书。
+部署地址：<http://100.78.177.33:8091>，仅绑定服务器的内网地址，使用 HTTP。网页登录 Cookie 随访问源自动使用 HTTP 配置；来源校验、CSRF 校验和登录保护继续保留。
 
 Web 访问密码在服务器首次启动时随机生成，保存于 `/opt/zhiyu/data/initial-password.txt`，仅文件所有者可读。Web 登录和密钥库主密码相互独立。首次进入后由使用者创建工作区和密钥库主密码，部署过程不会预设生产密钥库密码。
 
@@ -26,13 +26,13 @@ npm run web:build
 ZHIYU_ORIGIN=http://localhost:8091 npm run web:start
 ```
 
-默认监听 `127.0.0.1:8091`，数据默认保存到 `web-data/`。生产运行应配置 HTTPS，或在可信的 HTTPS 反向代理后运行。
+默认监听 `127.0.0.1:8091`，数据默认保存到 `web-data/`。当前内网部署使用 HTTP。UUID、复制和旧文档摘要计算已提供 HTTP 兼容；读取系统剪贴板时请使用 Ctrl/Cmd+V 手动粘贴。
 
 配置项：`ZHIYU_ORIGIN` 是浏览器访问的完整源地址；`ZHIYU_DATA_DIR` 是数据目录；`HOST` / `PORT` 是监听地址与端口；`ZHIYU_TLS_CERT` / `ZHIYU_TLS_KEY` 配置直接 HTTPS。`ZHIYU_INITIAL_PASSWORD` 可在首次启动前设置至少 16 位初始密码，已有所有者配置后不再生效。
 
 ## 服务器维护
 
-源码位于 `/opt/zhiyu/source`，持久化数据、自动备份与 TLS 证书分别位于 `/opt/zhiyu/data`、`/opt/zhiyu/backups` 和 `/opt/zhiyu/tls`。
+源码位于 `/opt/zhiyu/source`，持久化数据与自动备份分别位于 `/opt/zhiyu/data`、`/opt/zhiyu/backups`。原 TLS 文件保留在 `/opt/zhiyu/tls`，当前 HTTP 配置不加载证书。
 
 ```sh
 cd /opt/zhiyu/source
@@ -41,7 +41,7 @@ docker compose -f deploy/zhiyu/compose.yaml ps
 docker compose -f deploy/zhiyu/compose.yaml logs --tail=100 web
 ```
 
-容器以非 root 用户运行，根文件系统只读，具有重启策略、HTTPS 健康检查与日志轮转。容器内不安装 Electron 运行时。
+容器以非 root 用户运行，根文件系统只读，具有重启策略、HTTP 健康检查与日志轮转。容器内不安装 Electron 运行时。
 
 资产元数据与文档沿用上游存储方式；密钥库由主密码保护。原桌面系统密钥存储在 Web 版由服务器上的随机 AES-256-GCM 密钥代替，密钥文件为 `data/server.key`。直接搬迁整个数据目录必须同时保留该密钥。完整备份可以选择包含系统保护的凭据，并由备份密码加密；Web 访问密码配置不会随业务备份导出或恢复。
 
@@ -60,3 +60,19 @@ npm run desktop:build
 Web 集成测试使用隔离工作区与 SSH 测试服务器，覆盖鉴权、来源和 CSRF 校验、会话撤销、限速、加密及篡改拒绝、资产和文档持久化、SSE、SSH 输入输出与调整尺寸、文件导入、加密备份下载和检查以及服务重启。
 
 本机运行上游完整测试时，980 项中 934 项通过、43 项失败、3 项跳过。43 项均属于未修改的 `local-usage.test.mjs`，在独立导出的上游原版中同样复现（44 项中 1 项通过、43 项失败）。Web 版不提供该电脑日志采集功能，未为通过测试而修改其安全检查。
+
+## AI 出站代理
+
+`ZHIYU_AI_PROXY=http://host.docker.internal:7897` 将模型问答、AI 账号授权及 AI/API 用量采集接入宿主机已有的 HTTP 代理。容器通过 `host-gateway` 访问宿主机。`ZHIYU_AI_NO_PROXY` 指定绕过代理的主机，默认包含 localhost、127.0.0.1 和 IPv6 回环地址，因此本地 Embedding 请求不会经过代理。其他集成、SSH、IMAP 等沿用原网络路径。代理不会代填模型 API Key 或授权账号。
+
+## 导入已盘点的资产
+
+盘点只收集主机连接元信息、容器运行状态、镜像、端口、路由域名、GitHub 仓库元信息和已安装 AI 工具；不采集 SSH 私钥、密码、API Key、OAuth 令牌或代理订阅链接。未连接的主机与未绑定的 AI 工具均标记为待核验，未推断套餐、费用、到期日或额度。容器状态仅代表运行状态，不代表业务接口已验收。
+
+盘点数据和导入前备份不提交到 Git。可用下列入口导入现有盘点 JSON；导入合并保留既有资产及凭据，按标识或自然键去重，重复导入不会追加重复记录：
+
+```sh
+node scripts/import-web-inventory.mjs ORIGIN INVENTORY_JSON PASSWORD_FILE BEFORE_BACKUP_JSON
+```
+
+Web 测试还覆盖代理转发及流式响应、回环地址绕过、HTTP Cookie，以及资产合并幂等性。上文在 macOS 上失败的 43 项本机日志采集测试已在实际 Linux 运行镜像中重新验证，44 项全部通过。

@@ -19,7 +19,7 @@ import { createRefreshBatch } from "./services/refresh-batch.mjs";
 import { LocalUsageMonitor } from "./services/local-usage.mjs";
 import { DocumentsStore } from "./services/documents.mjs";
 import { WorkspaceActions } from "./services/workspace-actions.mjs";
-import { webMode, webPublish, isWebEvent, registerWebCallback } from "./platform.mjs";
+import { webMode, webPublish, isWebEvent, registerWebCallback, aiFetch } from "./platform.mjs";
 const electronUpdater = webMode
   ? {
       autoUpdater: Object.assign(new (await import("node:events")).EventEmitter(), {
@@ -842,14 +842,14 @@ function registerIpc() {
     onCallback: registerWebCallback,
     vault,
     openExternal: (url) => shell.openExternal(url),
-    fetchImpl: (...args) => net.fetch(...args),
+    fetchImpl: webMode ? aiFetch : (...args) => net.fetch(...args),
   });
   handle("ai-accounts:list", () => aiAccounts.list());
   handle("ai-accounts:start", (provider) => aiAccounts.start(provider));
   handle("ai-accounts:status", (id) => aiAccounts.status(id));
   handle("ai-accounts:finish", (id, code) => aiAccounts.finish(id, code));
   handle("ai-accounts:cancel", (id) => aiAccounts.cancel(id));
-  const usage = new UsageStore(join(app.getPath("userData"), "usage-history.json"), vault);
+  const usage = new UsageStore(join(app.getPath("userData"), "usage-history.json"), vault, aiFetch);
   const v2raynUsage = new V2raynUsage({
     configFile: join(app.getPath("userData"), "v2rayn-usage.json"),
     ...(process.env.NANPAD_TEST_DATA_DIR ? { discoverDirectories: async () => [] } : {}),
@@ -1139,6 +1139,7 @@ function registerIpc() {
     mutateAssets: mutateWorkspaceAssets,
   });
   agent = new AgentService({
+    fetchImpl: aiFetch,
     directory: app.getPath("userData"),
     secureStorage: safeStorage,
     getSnapshot: () => currentSnapshot,

@@ -10,15 +10,16 @@ services:
     restart: unless-stopped
     init: true
     environment:
-      ZHIYU_ORIGIN: https://100.78.177.33:8443
-      ZHIYU_TLS_CERT: /run/tls/cert.pem
-      ZHIYU_TLS_KEY: /run/tls/key.pem
+      ZHIYU_ORIGIN: http://100.78.177.33:8091
+      ZHIYU_AI_PROXY: http://host.docker.internal:7897
+      ZHIYU_AI_NO_PROXY: localhost,127.0.0.1,[::1],host.docker.internal,100.78.177.33
     ports:
-      - "100.78.177.33:8443:8091"
+      - "100.78.177.33:8091:8091"
     volumes:
       - /opt/zhiyu/data:/data
       - /opt/zhiyu/backups:/backups
-      - /opt/zhiyu/tls:/run/tls:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     read_only: true
     tmpfs:
       - /tmp:rw,nosuid,nodev,noexec,size=256m,mode=1777
@@ -33,7 +34,7 @@ services:
           CMD,
           node,
           -e,
-          "require('https').get('https://127.0.0.1:8091/api/health',{rejectUnauthorized:false,headers:{Host:'100.78.177.33:8443'}},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+          "require('http').get('http://127.0.0.1:8091/api/health',{headers:{Host:'100.78.177.33:8091'}},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s

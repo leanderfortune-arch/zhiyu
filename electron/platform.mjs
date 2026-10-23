@@ -20,3 +20,5 @@ export const webPublish = platform.publish ?? (() => {});
 export const isWebEvent = platform.isWebEvent ?? (() => false);
 
 export const registerWebCallback = platform.registerCallback ?? (() => {});
+
+export const aiFetch = platform.aiFetch ?? ((...args) => fetch(...args));

@@ -5,7 +5,10 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createAiFetch } from "./ai-fetch.mjs";
 import { inspectRaster } from "../electron/services/image-data.mjs";
+
+export const aiFetch = createAiFetch();
 
 export const directory = resolve(process.env.ZHIYU_DATA_DIR || "./web-data");
 mkdirSync(directory, { recursive: true, mode: 0o700 });
