@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type HTMLAttributes } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { isDesktop } from "@/lib/desktop";
+import { desktop, isDesktop } from "@/lib/desktop";
 import { usePresence } from "@/lib/motion";
 import { useAppStore, snapshotOf } from "@/lib/store";
 import { attentionOf } from "@/lib/status";
@@ -582,6 +582,12 @@ function ProfileMenu({ compact = false }: { compact?: boolean }) {
           {item(t("系统设置…"), () => useAppStore.getState().openSettingsPage())}
           {item(t("键盘快捷键"), () => window.dispatchEvent(new Event(SHORTCUTS_EVENT)))}
           {vaultUnlocked && item(t("立即锁定密钥库"), () => void lockVault())}
+          {desktop()?.runtime === "web" &&
+            item("退出 Web 登录", () => {
+              void desktop()
+                ?.logout?.()
+                .catch((error) => toast.error(String(error.message)));
+            })}
           <div className="my-1 border-t border-line" />
           {item(isDesktop() ? t("清空全部数据") : t("重置演示数据"), () => resetDemo(), "danger")}
         </div>

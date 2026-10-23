@@ -150,26 +150,21 @@ export function createBrowserTransport() {
     for (const url of result.links || []) showLink(url);
     return result;
   }
-  document.addEventListener("DOMContentLoaded", () => {
-    const button = document.createElement("button");
-    button.textContent = "退出登录";
-    button.style.cssText =
-      "position:fixed;bottom:12px;right:16px;z-index:1000;border:1px solid #dce3ec;background:#fff;color:#475569;border-radius:8px;padding:6px 12px;font:12px system-ui;cursor:pointer;box-shadow:0 2px 8px #0001";
-    button.onclick = async () => {
-      await ready;
-      await fetch("/api/logout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRF-Token": session.csrf },
-        body: "{}",
-      });
-      source.close();
-      location.replace("/login");
-    };
-    document.body.append(button);
-  });
+  async function logout() {
+    await ready;
+    const response = await fetch("/api/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": session.csrf },
+      body: "{}",
+    });
+    if (!response.ok) throw new Error("退出登录失败，请重试");
+    source.close();
+    location.replace("/login");
+  }
   return {
     contextBridge: {
       exposeInMainWorld(name, bridge) {
+        bridge.logout = logout;
         window[name] = bridge;
       },
     },

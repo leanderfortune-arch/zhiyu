@@ -164,6 +164,7 @@ export interface PersistedFile extends Snapshot {
 
 export interface DesktopBridge {
   runtime?: "web" | "desktop";
+  logout?(): Promise<void>;
   integrations: import("./integrations").IntegrationsBridge;
   documentAccounts: import("./document-accounts").DocumentAccountsBridge;
   identities: import("./identities").IdentityBridge;
