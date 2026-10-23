@@ -2,6 +2,7 @@
 export function createBrowserTransport() {
   const listeners = new Map();
   let session;
+  let loggingOut = false;
   let sendQueue = Promise.resolve();
   const ready = fetch("/api/session").then(async (response) => {
     if (response.status === 401) {
@@ -12,6 +13,7 @@ export function createBrowserTransport() {
   });
   const source = new EventSource("/api/events");
   source.onmessage = ({ data }) => {
+    if (loggingOut) return;
     const { channel, payload } = JSON.parse(data);
     if (channel === "web:open-external") showLink(payload.url);
     for (const fn of listeners.get(channel) || []) fn(null, payload);
@@ -152,6 +154,8 @@ export function createBrowserTransport() {
   }
   async function logout() {
     await ready;
+    loggingOut = true;
+    source.close();
     const response = await fetch("/api/logout", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": session.csrf },
