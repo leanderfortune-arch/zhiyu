@@ -2,6 +2,7 @@
 export function createBrowserTransport() {
   const listeners = new Map();
   let session;
+  let sendQueue = Promise.resolve();
   const ready = fetch("/api/session").then(async (response) => {
     if (response.status === 401) {
       location.replace("/login");
@@ -175,7 +176,8 @@ export function createBrowserTransport() {
     ipcRenderer: {
       invoke,
       send(channel, ...args) {
-        void invoke(channel, ...args).catch(() => {});
+        // IPC preserves order; preserve it across asynchronous HTTP terminal writes too.
+        sendQueue = sendQueue.then(() => invoke(channel, ...args)).catch(() => {});
       },
       on(channel, handler) {
         if (!listeners.has(channel)) listeners.set(channel, new Set());
