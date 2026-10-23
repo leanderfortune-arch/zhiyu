@@ -29,6 +29,14 @@ if (args.error) {
 
 const url = checkedUrl(args.url);
 const workspaceRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+// Optional authenticated Web workspace; credentials remain in an ignored local file.
+const storageState = process.env.BROWSER_SMOKE_STORAGE_STATE
+  ? checkedOutputPath(
+      realpathSync(process.env.BROWSER_SMOKE_STORAGE_STATE),
+      [workspaceRoot],
+      "browser session",
+    )
+  : undefined;
 const outPng = checkedOutputPath(args.outPng, [workspaceRoot]);
 const derived = derivedPaths(outPng);
 const mobilePng = checkedOutputPath(derived.mobilePng, [workspaceRoot]);
@@ -103,6 +111,7 @@ try {
     const errors = { consoleErrors: [], pageErrors: [] };
     const page = await browser.newPage({
       viewport: { width: vp.width, height: vp.height },
+      storageState,
     });
     page.on("console", (msg) => {
       if (msg.type() === "error") errors.consoleErrors.push(msg.text());
@@ -112,7 +121,10 @@ try {
     // networkidle never settles and would burn the whole timeout.
     const resp = await page.goto(url, { waitUntil: "domcontentloaded", timeout: timeoutMs });
     const status = resp?.status() ?? 0;
-    if (status === 200) await page.locator('[data-app-ready="true"]').waitFor({ state: "attached", timeout: timeoutMs });
+    if (status === 200)
+      await page
+        .locator('[data-app-ready="true"]')
+        .waitFor({ state: "attached", timeout: timeoutMs });
     await page.waitForTimeout(1000);
 
     const title = await page.title();
@@ -144,7 +156,10 @@ try {
     };
   }
 
-  const brandWarnings = computeBrandWarnings({ hasCanvas: viewports.desktop.hasCanvas, workspaceRoot });
+  const brandWarnings = computeBrandWarnings({
+    hasCanvas: viewports.desktop.hasCanvas,
+    workspaceRoot,
+  });
   // Only a dev server answers /__app-env, so smoking the built output reads as
   // indeterminate — report a divergence, never the absence of an observation.
   const authWarnings = authInvariantWarnings(

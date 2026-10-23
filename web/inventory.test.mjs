@@ -30,3 +30,22 @@ test("inventory merge preserves edits and credentials and is idempotent", () => 
   assert.deepEqual(again.snapshot, first.snapshot);
   assert.deepEqual(again.added, { servers: 0, services: 0, aiAssets: 0, links: 0 });
 });
+
+test("normalized URLs deduplicate while containers sharing a URL remain distinct", () => {
+  const existing = {
+    servers: [],
+    services: [{ id: "manual", name: "Custom project", url: "https://example.com/" }],
+    aiAssets: [],
+  };
+  const inventory = {
+    services: [
+      { id: "project", name: "Project", url: "https://example.com" },
+      { id: "web", name: "web container", provider: "Docker", url: "http://server:3000" },
+      { id: "proxy", name: "proxy container", provider: "Docker", url: "http://server:3000" },
+    ],
+  };
+  const first = mergeInventory(existing, inventory);
+  assert.equal(first.added.services, 2);
+  assert.equal(first.snapshot.services.length, 3);
+  assert.equal(mergeInventory(first.snapshot, inventory).added.services, 0);
+});

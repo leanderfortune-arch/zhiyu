@@ -5,7 +5,16 @@ export function mergeInventory(snapshot, inventory) {
   const added = {};
   const identities = {
     servers: (item) => `${item.host}:${item.port || 22}`,
-    services: (item) => item.url || item.name,
+    services: (item) => {
+      // Containers sharing a reverse-proxy URL remain separate managed resources.
+      if (item.provider === "Docker") return "docker:" + item.name;
+      if (!item.url) return item.name;
+      try {
+        return new URL(item.url).href;
+      } catch {
+        return item.url;
+      }
+    },
     aiAssets: (item) => `${item.provider}:${item.name}`,
   };
   for (const [collection, identity] of Object.entries(identities)) {
