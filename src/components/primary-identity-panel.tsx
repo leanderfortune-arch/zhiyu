@@ -385,7 +385,9 @@ export function PrimaryIdentityPanel({ initial = false }: { initial?: boolean })
             )}
           </div>
           <p className="primary-identity-note">
-            {t("Linux.do 登录用于绑定主身份；本机资产不会上传，密钥库仍由本地主密码保护。")}
+            {desktop()?.runtime === "web"
+              ? "Linux.do 登录仅用于绑定身份；资产保存在服务器，密钥库仍由主密码保护。"
+              : t("Linux.do 登录用于绑定主身份；本机资产不会上传，密钥库仍由本地主密码保护。")}
           </p>
           {!initial && identity && !sessionId && (
             <>

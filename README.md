@@ -1,3 +1,5 @@
+> 本 fork 新增独立 Node.js Web 版，支持服务器部署、Web 登录与真实业务后端。使用与部署见 [Web 部署说明](docs/WEB-DEPLOYMENT.md)。
+
 <p align="center">
   <img src="public/brand/zhiyu.svg" width="96" height="96" alt="知屿标志" />
 </p>

@@ -252,7 +252,9 @@ export class AiAccounts {
     fetchImpl = fetch,
     providers = AI_PROVIDERS,
     timeoutMs = 300000,
+    onCallback = () => {},
   }) {
+    this.onCallback = onCallback;
     this.vault = vault;
     this.openExternal = openExternal;
     this.fetch = fetchImpl;
@@ -405,6 +407,7 @@ export class AiAccounts {
         url.searchParams.set("access_type", "offline");
         url.searchParams.set("prompt", "consent");
       }
+      this.onCallback(session.redirect, session.state);
       await this.openExternal(url.toString());
       return {
         id: session.id,

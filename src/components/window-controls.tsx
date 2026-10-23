@@ -32,7 +32,7 @@ export function WindowControls() {
     };
   }, [bridge]);
 
-  if (!bridge || platform === null || platform === "darwin") return null;
+  if (!bridge || platform === null || platform === "darwin" || platform === "web") return null;
 
   return (
     <div className="win-controls no-drag">
@@ -50,12 +50,7 @@ export function WindowControls() {
           <Square className="size-3.5" strokeWidth={2} />
         )}
       </button>
-      <button
-        type="button"
-        aria-label={t("关闭")}
-        data-close
-        onClick={() => bridge.win.close()}
-      >
+      <button type="button" aria-label={t("关闭")} data-close onClick={() => bridge.win.close()}>
         <X className="size-4" strokeWidth={2} />
       </button>
     </div>

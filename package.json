@@ -29,7 +29,10 @@
     "desktop:build": "node node_modules/vite/bin/vite.js build --config vite.desktop.config.ts",
     "desktop:pack": "npm run desktop:build && node scripts/package-desktop.mjs --dir --publish never",
     "desktop:dist": "npm run desktop:build && node scripts/package-desktop.mjs --publish never",
-    "desktop:portable": "node scripts/package-portable.mjs"
+    "desktop:portable": "node scripts/package-portable.mjs",
+    "web:build": "node scripts/build-web.mjs",
+    "web:start": "node web/server.mjs",
+    "web:test": "node --test web/*.test.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
@@ -97,6 +100,7 @@
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "sanitize-html": "^2.17.7",
+    "sharp": "^0.35.5",
     "sonner": "^2.0.7",
     "ssh2": "^1.17.0",
     "tailwind-merge": "^3.5.0",

@@ -11,6 +11,8 @@ export default tseslint.config(
     ignores: [
       "dist/**",
       "dist-desktop/**",
+      "dist-web/**",
+      "web/bridge.generated.js",
       "release/**",
       ".output/**",
       ".vercel/**",

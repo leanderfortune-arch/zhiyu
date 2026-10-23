@@ -19,7 +19,14 @@ import { createRefreshBatch } from "./services/refresh-batch.mjs";
 import { LocalUsageMonitor } from "./services/local-usage.mjs";
 import { DocumentsStore } from "./services/documents.mjs";
 import { WorkspaceActions } from "./services/workspace-actions.mjs";
-import electronUpdater from "electron-updater";
+import { webMode, webPublish, isWebEvent, registerWebCallback } from "./platform.mjs";
+const electronUpdater = webMode
+  ? {
+      autoUpdater: Object.assign(new (await import("node:events")).EventEmitter(), {
+        setFeedURL() {},
+      }),
+    }
+  : (await import("electron-updater")).default;
 import { DesktopUpdater } from "./services/app-updater.mjs";
 import {
   app,
@@ -35,7 +42,7 @@ import {
   safeStorage,
   screen,
   powerMonitor,
-} from "electron";
+} from "./platform.mjs";
 import { X509Certificate, randomUUID } from "node:crypto";
 import { CaptureQueue } from "./services/browser-capture.mjs";
 import { ExtensionBridge } from "./services/extension-bridge.mjs";
@@ -241,6 +248,7 @@ function assertPublicVaultRecord(id) {
 }
 
 function showWindow() {
+  if (webMode) return;
   if (!win || win.isDestroyed()) {
     void createWindow();
     return;
@@ -497,6 +505,7 @@ async function createWindow() {
 }
 
 function emit(channel, payload) {
+  if (webMode) webPublish(channel, payload);
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
@@ -511,6 +520,7 @@ function sameOrigin(a, b) {
 
 /** Wrap a handler so the renderer always gets `{ok}` or `{ok:false, error}`. */
 function isMainFrame(event) {
+  if (webMode) return isWebEvent(event);
   return Boolean(
     win &&
     !win.isDestroyed() &&
@@ -587,6 +597,7 @@ function registerIpc() {
   for (const method of ["status", "configure", "code", "remove"])
     handle("totp:" + method, (...args) => accountTotp[method](...args));
   identities = new IdentityAccounts({
+    onCallback: registerWebCallback,
     vault,
     fetchImpl: (...args) => net.fetch(...args),
     openExternal: (url) => shell.openExternal(url),
@@ -761,6 +772,7 @@ function registerIpc() {
     return { count: result.count };
   });
   mainIdentity = new MainIdentityService({
+    onCallback: registerWebCallback,
     file: join(app.getPath("userData"), "main-identity.enc"),
     safeStorage,
     fetchImpl: (...args) => net.fetch(...args),
@@ -827,6 +839,7 @@ function registerIpc() {
     return result;
   });
   aiAccounts = new AiAccounts({
+    onCallback: registerWebCallback,
     vault,
     openExternal: (url) => shell.openExternal(url),
     fetchImpl: (...args) => net.fetch(...args),
@@ -961,7 +974,7 @@ function registerIpc() {
   const usageTimer = setInterval(() => {
     if (
       vault.unlocked &&
-      BrowserWindow.getAllWindows().some((w) => w.isVisible() && !w.isMinimized())
+      (webMode || BrowserWindow.getAllWindows().some((w) => w.isVisible() && !w.isMinimized()))
     )
       void refreshUsage(false).catch(() => {});
   }, 300000);
@@ -1608,7 +1621,9 @@ export const hostKeyId = (host, port) =>
   `ssh-host:${String(host).trim().toLowerCase()}:${Number(port) || 22}`;
 
 // One window per launch; a second instance just focuses the first.
-if (!app.requestSingleInstanceLock()) {
+if (webMode) {
+  // Node HTTP runtime initializes services explicitly, without desktop windows.
+} else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on("second-instance", (_event, argv) => {
@@ -1828,4 +1843,40 @@ function buildMenu() {
       ],
     },
   ]);
+}
+
+/** Shared domain services for the authenticated, single-owner web workspace. */
+export async function startWebServices() {
+  if (!webMode) throw new Error("Web runtime is not enabled");
+  restoreOutcome = await applyPendingRestore(app.getPath("userData"));
+  try {
+    const saved = JSON.parse(
+      await readFile(join(app.getPath("userData"), "preferences.json"), "utf8"),
+    );
+    preferences = { ...preferences, ...saved };
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  try {
+    const saved = JSON.parse(await readFile(dataFile(), "utf8"));
+    currentSnapshot = saved?.state ?? saved ?? {};
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  registerIpc();
+  mailPushTimer = setInterval(() => void mailPush.tick().catch(() => {}), 60_000);
+  return {
+    lock: lockVault,
+    async stop() {
+      lockVault();
+      clearInterval(mailPushTimer);
+      app.emit("before-quit");
+      identities?.stop();
+      mainIdentity?.stop();
+      documentAccounts?.stop();
+      await extensionBridge?.stop();
+      ssh?.closeAll();
+      await Promise.all([assetWrites, preferenceWrites, ...writes.values()]);
+    },
+  };
 }

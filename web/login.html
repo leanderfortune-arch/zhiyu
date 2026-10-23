@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>登录 · 知屿</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        background: #f5f7fb;
+        color: #172238;
+        font:
+          15px/1.6 system-ui,
+          sans-serif;
+        padding: 24px;
+      }
+      main {
+        width: 100%;
+        max-width: 420px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 36px;
+        box-shadow: 0 18px 60px #2439590c;
+      }
+      img {
+        width: 54px;
+        height: 54px;
+      }
+      h1 {
+        font-size: 26px;
+        margin: 18px 0 4px;
+      }
+      p {
+        color: #68758a;
+        margin: 0 0 28px;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+      }
+      input {
+        width: 100%;
+        margin: 8px 0 18px;
+        padding: 13px;
+        border: 1px solid #ccd6e3;
+        border-radius: 8px;
+        font: inherit;
+      }
+      input:focus {
+        outline: 2px solid #a9c4fa;
+        border-color: #3b6fe0;
+      }
+      button {
+        width: 100%;
+        background: #3b6fe0;
+        color: white;
+        border: 0;
+        border-radius: 8px;
+        padding: 13px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+      }
+      #error {
+        color: #b42318;
+        min-height: 24px;
+        margin: 12px 0 0;
+        font-size: 14px;
+      }
+      .note {
+        margin: 22px 0 0;
+        font-size: 12px;
+        color: #748196;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/brand/zhiyu.svg" alt="知屿" />
+      <h1>登录知屿</h1>
+      <p>你的数字资产工作空间</p>
+      <form id="login">
+        <label for="password">Web 访问密码</label
+        ><input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+          autofocus
+        /><button>登录工作空间</button>
+        <div id="error" role="alert"></div>
+      </form>
+      <p class="note">仅供工作空间所有者使用。资产与凭据保存在服务器，密钥库仍由主密码单独保护。</p>
+    </main>
+    <script src="/login.js"></script>
+  </body>
+</html>

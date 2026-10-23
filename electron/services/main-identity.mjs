@@ -131,11 +131,13 @@ export class MainIdentityService {
     safeStorage,
     fetchImpl = globalThis.fetch,
     openExternal,
+    onCallback = () => {},
     normalizeImage = validateImageDataUrl,
     origin = "https://auth.allinsong.top",
   }) {
     const url = new URL(origin);
     if (url.href !== "https://auth.allinsong.top/") throw new Error("主身份登录服务地址无效。");
+    this.onCallback = onCallback;
     this.#file = file;
     this.#storage = safeStorage;
     this.#fetch = fetchImpl;
@@ -535,6 +537,7 @@ export class MainIdentityService {
       });
       valid();
       session.redirectUri = `http://127.0.0.1:${server.address().port}${CALLBACK}`;
+      this.onCallback(session.redirectUri, session.state);
       const result = await this.#request(`${this.#origin}/v1/login/start`, {
         body: {
           redirectUri: session.redirectUri,

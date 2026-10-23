@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
-import { shell, net } from "electron";
+import { shell, net, registerWebCallback } from "../platform.mjs";
 
 /**
  * Desktop OAuth providers.
@@ -58,7 +58,8 @@ export async function signIn({ provider, clientId, clientSecret }) {
   const config = OAUTH_PROVIDERS[provider];
   if (!config) throw new Error(`不支持的登录方式：${provider}`);
   if (!clientId) throw new Error("请先填写客户端 ID");
-  if (config.usesSecret && !clientSecret) throw new Error(`${config.label} 的桌面客户端还需要客户端密钥`);
+  if (config.usesSecret && !clientSecret)
+    throw new Error(`${config.label} 的桌面客户端还需要客户端密钥`);
 
   const verifier = base64url(randomBytes(32));
   const challenge = base64url(createHash("sha256").update(verifier).digest());
@@ -79,6 +80,7 @@ export async function signIn({ provider, clientId, clientSecret }) {
   authUrl.searchParams.set("state", state);
   for (const [k, v] of Object.entries(config.extraAuthParams)) authUrl.searchParams.set(k, v);
 
+  registerWebCallback(redirectUri, state);
   await shell.openExternal(authUrl.toString());
 
   let code;

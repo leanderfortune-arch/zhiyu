@@ -163,6 +163,7 @@ export interface PersistedFile extends Snapshot {
 }
 
 export interface DesktopBridge {
+  runtime?: "web" | "desktop";
   integrations: import("./integrations").IntegrationsBridge;
   documentAccounts: import("./document-accounts").DocumentAccountsBridge;
   identities: import("./identities").IdentityBridge;
@@ -283,7 +284,7 @@ export interface DesktopBridge {
     ): Promise<{ path: string; entries: SftpEntry[]; truncated: boolean }>;
     download(id: string, path: string): Promise<boolean>;
   };
-  isDesktop: true;
+  isDesktop: boolean;
   info(): Promise<AppInfo>;
   checkUpdate(): Promise<UpdateCheck>;
   updates: {
@@ -393,10 +394,10 @@ declare global {
 }
 
 /**
- * The desktop bridge, or `null` in a browser.
- *
- * Every caller has to handle `null`: the same UI runs as a web preview where
- * there is no main process to talk to, and the simulated data path stands in.
+ * The domain-service bridge, supplied by Electron or the authenticated Web runtime.
+ * A standalone preview has no bridge and returns null.
+ * The legacy isDesktop() helper detects a real service bridge, including Web;
+ * runtime distinguishes OS-only controls from shared application capabilities.
  */
 export function desktop(): DesktopBridge | null {
   if (typeof window === "undefined") return null;

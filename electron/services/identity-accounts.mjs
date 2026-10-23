@@ -220,8 +220,10 @@ export class IdentityAccounts {
     vault,
     fetchImpl = globalThis.fetch,
     openExternal,
+    onCallback = () => {},
     getAssets = () => ({ secrets: [] }),
   }) {
+    this.onCallback = onCallback;
     this.#vault = vault;
     this.#fetch = fetchImpl;
     this.#openExternal = openExternal;
@@ -515,6 +517,7 @@ export class IdentityAccounts {
           code_challenge: createHash("sha256").update(session.verifier).digest("base64url"),
           code_challenge_method: "S256",
         }).toString();
+        this.onCallback(config.redirectUri, session.state);
         await this.#openExternal(authorization.href);
         this.#assert(generation);
         return { id: session.id, expiresAt: session.expiresAt };

@@ -41,3 +41,9 @@ release/
 /tray_crop.png
 /scripts/test-win.mjs
 /public/openai-preview.html
+
+# Web runtime artifacts and server-only credentials
+/dist-web/
+/web-data/
+/web/bridge.generated.js
+/deploy/zhiyu/tls/
