@@ -1,5 +1,7 @@
 /** Real form regression: a legacy Secure cookie must not break HTTP login. */
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
@@ -9,6 +11,9 @@ if (!originInput || !passwordFile || !screenshot)
 const origin = new URL(originInput).origin;
 if (!origin.startsWith("http:")) throw new Error("This regression exercises the HTTP login path");
 const password = readFileSync(passwordFile, "utf8").trim();
+process.umask(0o077);
+const stateDirectory = mkdtempSync(join(tmpdir(), "zhiyu-login-state-"));
+const stateFile = join(stateDirectory, "state.json");
 const session = "zhiyu-login-" + randomUUID().slice(0, 8);
 function run(args, input) {
   const result = spawnSync("agent-browser", ["--session", session, ...args], {
@@ -63,8 +68,10 @@ try {
   );
   const url = run(["get", "url"]);
   if (new URL(url).pathname !== "/") throw new Error("The form returned to the login page");
-  const result = JSON.parse(run(["cookies", "get", "--json"]));
-  const cookies = result.data?.cookies ?? result.cookies ?? result.data ?? result;
+  // `cookies get` only returns cookies visible to the current HTTP URL.
+  // Saved context state also includes the legacy Secure cookies for HTTPS.
+  run(["state", "save", stateFile]);
+  const cookies = JSON.parse(readFileSync(stateFile, "utf8")).cookies;
   activeCookie = cookies.find((cookie) => cookie.name === "zhiyu_session_http");
   if (!activeCookie || activeCookie.secure) throw new Error("HTTP login cookie was not accepted");
   if (!cookies.some((cookie) => cookie.name === "zhiyu_session" && cookie.secure))
@@ -80,7 +87,11 @@ try {
     }),
   );
 } finally {
-  run(["close"]);
+  try {
+    run(["close"]);
+  } finally {
+    rmSync(stateDirectory, { recursive: true, force: true });
+  }
   if (activeCookie) {
     const headers = { Cookie: `${activeCookie.name}=${activeCookie.value}` };
     const response = await fetch(origin + "/api/session", { headers });
